@@ -169,3 +169,10 @@ git push origin master
 
 静态文件，比如图片，JavaScript，CSS、favicon.ico、robots.txt等，建议使用nginx或apache等，而不是依赖Django本身。
 可参考 [管理静态文件](https://docs.djangoproject.com/zh-hans/3.1/howto/static-files/) 和 [部署静态文件](https://docs.djangoproject.com/zh-hans/3.1/howto/static-files/deployment/) 。
+
+
+## 序列化数据库中的数据到json文件及反序列化
+```shell
+python manage.py dumpdata -o system_permissions.json system.Permissions
+python manage.py loaddata system_permissions.json
+```
