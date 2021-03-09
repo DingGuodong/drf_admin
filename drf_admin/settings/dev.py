@@ -31,10 +31,16 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
+# https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#configuring-internal-ips
+INTERNAL_IPS = [
+    '127.0.0.1',
+    'localhost',
+]
+
 # Application definition
 
 INSTALLED_APPS = [
-    'simpleui',
+    # 'simpleui',  # https://github.com/newpanjing/simpleui
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -62,9 +68,12 @@ INSTALLED_APPS = [
     'monitor',
     'cmdb',
     'information',
+    # debug
+    'debug_toolbar',
 ]
 
 MIDDLEWARE = [
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -244,7 +253,13 @@ AUTHENTICATION_BACKENDS = [
 
 DEFAULT_PWD = os.getenv('DEFAULT_PWD', '123456')  # 创建用户默认密码
 BASE_API = 'api/'  # 项目BASE API, 如设置时必须以/结尾
-WHITE_LIST = [f'/{BASE_API}oauth/login/', f'/{BASE_API}oauth/info/', f'/{BASE_API}swagger/.*']  # 权限认证白名单
+
+# 权限控制白名单，在此列表中的URL不会进行权限的校验，即公开访问
+PERMISSION_WHITE_LIST = [f'/{BASE_API}oauth/login/',
+                         f'/{BASE_API}oauth/logout/',
+                         f'/{BASE_API}oauth/info/',
+                         f'/{BASE_API}swagger/.*']  # 权限认证白名单
+
 REGEX_URL = '^{url}$'  # 权限匹配时,严格正则url
 PROJECT_START_TIME = psutil.Process().create_time()
 

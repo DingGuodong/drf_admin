@@ -17,9 +17,12 @@ from rest_framework.permissions import BasePermission
 from drf_admin.common.permissions import redis_storage_permissions
 
 
-class UserLock(APIException):
+class UserIsLockedException(APIException):
+    """
+    用于锁定用户
+    """
     status_code = status.HTTP_400_BAD_REQUEST
-    default_detail = '用户已被锁定,请联系管理员'
+    default_detail = '该用户已被锁定，请与管理员联系'
     default_code = 'not_authenticated'
 
 
@@ -30,19 +33,27 @@ class RbacPermission(BasePermission):
 
     @staticmethod
     def pro_uri(uri):
-        base_api = settings.BASE_API
+        """
+        :param uri:
+        :type uri:
+        :return:
+        :rtype: str
+        """
+        base_api = settings.BASE_API  # "/api"
         uri = '/' + base_api + '/' + uri + '/'
-        return re.sub('/+', '/', uri)
+        return re.sub('/+', '/', uri)  # "/api/uri"
 
     def has_permission(self, request, view):
         # 验证用户是否被锁定
         if not request.user.is_active:
-            raise UserLock()
-        request_url = request.path
+            raise UserIsLockedException()
+
+        request_url = request.path  # such as '/api/monitor/users/', no parameters here
         # 如果请求url在白名单，放行
-        for safe_url in settings.WHITE_LIST:
+        for safe_url in settings.PERMISSION_WHITE_LIST:
             if re.match(settings.REGEX_URL.format(url=safe_url), request_url):
                 return True
+
         # admin权限放行
         conn = get_redis_connection('user_info')
         if conn.exists('user_info_%s' % request.user.id):
@@ -53,19 +64,26 @@ class RbacPermission(BasePermission):
             user_permissions = []
             if 'admin' in request.user.roles.values_list('name', flat=True):
                 return True
+
         # RBAC权限验证
         # Step 1 验证redis中是否存储权限数据
         request_method = request.method
         if not conn.exists('user_permissions_manage'):
             redis_storage_permissions(conn)
         # Step 2 判断请求路径是否在权限控制中
-        url_keys = conn.hkeys('user_permissions_manage')
-        for url_key in url_keys:
+        url_keys = conn.hkeys('user_permissions_manage')  # type:list
+        redis_key = None
+        for url_key in url_keys:  # type: bytes
             if re.match(settings.REGEX_URL.format(url=self.pro_uri(url_key.decode())), request_url):
                 redis_key = url_key.decode()
                 break
-        else:
-            return True
+        # else:
+        #     return True
+        if redis_key is None:  # 即上述所有url都不匹配
+            # 默认权限为：在未经配置permission（权限控制表为空）的情况下，拒绝所有其他用户访问所有资源
+            # 触发：rest_framework.exceptions.PermissionDenied 异常
+            return False
+
         # Step 3 redis权限验证
         permissions = json.loads(conn.hget('user_permissions_manage', redis_key).decode())
         method_hit = False  # 同一接口配置不同权限验证

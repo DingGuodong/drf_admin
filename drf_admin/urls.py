@@ -58,3 +58,9 @@ urlpatterns = [
          xframe_options_exempt(schema_view.with_ui('redoc', cache_timeout=0)), name='schema-redoc'),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+if settings.DEBUG:
+    from django.conf.urls import include, url
+    import debug_toolbar
+
+    urlpatterns += url(r'^__debug__/', include(debug_toolbar.urls)),
